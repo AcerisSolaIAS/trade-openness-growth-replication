@@ -103,6 +103,34 @@ def add_centered_paragraph(doc, text, size=Pt(12), bold=False, italic=False,
     return p
 
 
+def add_page_number(section):
+    """Insert a centered page number in the footer of the section."""
+    footer = section.footer
+    p = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    set_paragraph_spacing(p, line_spacing=2.0, first_line_indent=Inches(0.0))
+    run = p.add_run()
+    fld_begin = OxmlElement("w:fldChar")
+    fld_begin.set(qn("w:fldCharType"), "begin")
+    instr = OxmlElement("w:instrText")
+    instr.set(qn("xml:space"), "preserve")
+    instr.text = "PAGE"
+    fld_end = OxmlElement("w:fldChar")
+    fld_end.set(qn("w:fldCharType"), "end")
+    run._r.append(fld_begin)
+    run._r.append(instr)
+    run._r.append(fld_end)
+
+
+def add_line_numbers(section):
+    """Enable continuous line numbering for the section."""
+    lnNumType = OxmlElement("w:lnNumType")
+    lnNumType.set(qn("w:start"), "1")
+    lnNumType.set(qn("w:countBy"), "1")
+    lnNumType.set(qn("w:restart"), "continuous")
+    section._sectPr.append(lnNumType)
+
+
 # ---------------------------------------------------------------------------
 # Tables (editable Word tables, no vertical rules)
 # ---------------------------------------------------------------------------
@@ -124,7 +152,7 @@ def add_word_table(doc, headers, rows, col_widths=None):
         cell.text = headers[i]
         for paragraph in cell.paragraphs:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            set_paragraph_spacing(paragraph, line_spacing=1.15,
+            set_paragraph_spacing(paragraph, line_spacing=2.0,
                                   first_line_indent=Inches(0.0))
             set_run_font(paragraph.runs[0], bold=True)
         if col_widths:
@@ -136,7 +164,7 @@ def add_word_table(doc, headers, rows, col_widths=None):
             row_cells[i].text = str(val)
             for paragraph in row_cells[i].paragraphs:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                set_paragraph_spacing(paragraph, line_spacing=1.15,
+                set_paragraph_spacing(paragraph, line_spacing=2.0,
                                       first_line_indent=Inches(0.0))
                 set_run_font(paragraph.runs[0])
             if col_widths:
@@ -165,12 +193,15 @@ def add_word_table(doc, headers, rows, col_widths=None):
     return table
 
 
+DATA_SOURCE = "Data source: World Bank World Development Indicators (2024)."
+
+
 def add_table_note(doc, text):
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     set_paragraph_spacing(p, before=Pt(3), after=Pt(12),
                           line_spacing=2.0, first_line_indent=Inches(0.0))
-    run = p.add_run("Note: " + text)
+    run = p.add_run("Note: " + text + " " + DATA_SOURCE)
     set_run_font(run, italic=True, size=Pt(11))
     return p
 
@@ -299,6 +330,8 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     section.left_margin = Inches(1.0)
     section.right_margin = Inches(1.0)
     set_default_font(doc)
+    add_page_number(section)
+    add_line_numbers(section)
 
     # Title (no author information in the anonymized manuscript).
     add_centered_paragraph(
@@ -311,8 +344,8 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_heading(doc, "Abstract", level=1)
     abstract_text = (
         f"This paper re-examines the trade openness-growth relationship using a transparent, "
-        f"reproducible panel of up to 183 economies from 2000 to 2022. We estimate pooled OLS, "
-        f"fixed-effects, time-effects, and two-way fixed-effects specifications and report "
+        f"reproducible panel of up to 183 economies from 2000 to 2022. It estimates pooled OLS, "
+        f"fixed-effects, time-effects, and two-way fixed-effects specifications and reports "
         f"Maddala-Wu Fisher panel unit-root tests, Engle-Granger residual cointegration tests, "
         f"and subsample splits by development level, crisis period, and trade intensity. A 1% "
         f"increase in the trade-to-GDP ratio is associated with a {fe_trade_c:.4f}% rise in GDP "
@@ -344,9 +377,9 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         "(1999) find a positive causal link using cross-sectional instruments, Rodriguez and Rodrik "
         "(2000) famously question the robustness of these findings, arguing that openness indicators "
         "often proxy for geography, institutions, and macroeconomic stability rather than trade policy "
-        "itself. Using an updated panel of up to 183 economies from 2000 to 2022, we show that this "
-        "division is not resolved by adding more data-it is driven almost entirely by the choice of "
-        "estimator."
+        "itself. Using an updated panel of up to 183 economies from 2000 to 2022, the analysis shows "
+        "that this division is not resolved by adding more data-it is driven almost entirely by the choice "
+        "of estimator."
     )
     add_paragraph(
         doc,
@@ -382,19 +415,19 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         "consequences of import competition in specific labor markets (Autor et al., 2013; Pierce & "
         "Schott, 2016; Fajgelbaum & Khandelwal, 2016). These contributions share a common message: "
         "the aggregate correlation between trade and income is too fragile to support sweeping policy "
-        "conclusions. Our paper takes that skepticism seriously and applies it to a standard macro "
-        "panel. We do not claim to estimate a causal effect; instead, we document how sensitive the "
+        "conclusions. This paper takes that skepticism seriously and applies it to a standard macro "
+        "panel. No causal effect is claimed; instead, the paper documents how sensitive the "
         "association is to modeling choices that are often treated as incidental."
     )
     add_paragraph(
         doc,
-        "We assemble an unbalanced panel of up to 183 economies from 2000 to 2022 using only the World "
+        "An unbalanced panel of up to 183 economies from 2000 to 2022 is assembled using only the World "
         "Bank World Development Indicators API (World Bank, 2024). The analysis is deliberately "
         "transparent: pooled OLS, fixed effects, time effects, and two-way fixed effects are reported "
         "side by side, together with Maddala-Wu Fisher panel unit-root tests (Maddala & Wu, 1999), "
         "Engle-Granger residual cointegration tests, subsample splits by development level and crisis "
         "period, and robustness checks that exclude small open economies, use lagged trade openness, "
-        "and first-difference the data. Our aim is not to crown a preferred specification but to show "
+        "and first-difference the data. The aim is not to crown a preferred specification but to show "
         "how much the estimated trade-growth nexus moves-and to ask what that instability means for "
         "empirical research and for policy."
     )
@@ -432,10 +465,10 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     )
     add_paragraph(
         doc,
-        "The sample covers the period 2000-2022. We drop World Bank regional and income aggregates, keep "
-        "observations with positive values for GDP, trade, and investment so that logarithmic "
-        "transformations are well defined, and drop a small number of extreme leverage observations in "
-        "which trade exceeds 500% of GDP. These cases are mostly city-states and financial entrepots "
+        "The sample covers the period 2000-2022. Regional and income aggregates are dropped, and observations "
+        "with positive values for GDP, trade, and investment are kept so that logarithmic "
+        "transformations are well defined, and a small number of extreme leverage observations in which "
+        "trade exceeds 500% of GDP are dropped. These cases are mostly city-states and financial entrepots "
         "such as Hong Kong SAR, Singapore, and Luxembourg, where re-exports and financial-services trade "
         "inflate the merchandise trade measure far beyond domestic production. For example, Singapore's "
         "trade-to-GDP ratio exceeds 300% in every year of the sample, and Hong Kong's is consistently "
@@ -448,7 +481,7 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         "The resulting unbalanced panel contains 3,919 country-year observations for 183 economies. Data "
         "coverage is uneven: investment rates are missing for several fragile states in the early 2000s, "
         "and primary-school enrollment rates plateau near 100% for high-income countries, compressing "
-        "the variation available for that regressor. We do not impute missing values; instead, the panel "
+        "the variation available for that regressor. Missing values are not imputed; instead, the panel "
         "estimators use the country-years that are available for each specification. Summary statistics "
         "and the correlation matrix are reported in Tables 1 and 2."
     )
@@ -470,22 +503,22 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     )
     add_paragraph(
         doc,
-        "We address this limitation in two ways. First, we control for investment, schooling, and "
+        "This limitation is addressed in two ways. First, the model controls for investment, schooling, and "
         "population growth, which capture some of the channels through which openness might affect "
-        "income. Second, we exclude the most extreme cases of re-export and financial entrepot activity, "
-        "and we split the sample by development level and trade intensity to see whether the association "
-        "is driven by a particular group of countries. Even so, our estimates should be read as "
+        "income. Second, the most extreme cases of re-export and financial entrepot activity are excluded, "
+        "and the sample is split by development level and trade intensity to see whether the association "
+        "is driven by a particular group of countries. Even so, the estimates should be read as "
         "conditional correlations rather than causal effects."
     )
 
     add_heading(doc, "2.3 Econometric strategy", level=2)
     add_paragraph(
         doc,
-        "We estimate four panel specifications. First, pooled OLS provides a baseline that reflects both "
+        "Four panel specifications are estimated. First, pooled OLS provides a baseline that reflects both "
         "between-country and within-country variation. Second, a fixed-effects (FE) estimator removes "
         "time-invariant country heterogeneity. Third, a time-effects (TE) estimator removes common shocks "
         "and trends. Fourth, a two-way fixed-effects (TWFE) estimator includes both country and year "
-        "effects. The TWFE model is our most demanding specification because the coefficient on trade "
+        "effects. The TWFE model is the most demanding specification because the coefficient on trade "
         "openness is identified only from deviations of a country's trade share from its own long-run "
         "mean and from the global year-specific mean."
     )
@@ -500,11 +533,11 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     )
     add_paragraph(
         doc,
-        "Because GDP per capita is highly persistent, we also estimate a dynamic panel that includes a "
-        "lagged dependent variable. The lagged dependent variable partly controls for convergence "
+        "Because GDP per capita is highly persistent, a dynamic panel that includes a lagged dependent "
+        "variable is also estimated. The lagged dependent variable partly controls for convergence "
         "dynamics and absorbs omitted slow-moving factors, but it is known to introduce bias in short "
-        "panels; we therefore treat it as a robustness check rather than the preferred model (Nickell, "
-        "1981). Finally, we report first-differenced estimates, which remove country-specific levels and "
+        "panels; it is therefore treated as a robustness check rather than the preferred model (Nickell, "
+        "1981). Finally, first-differenced estimates are reported, which remove country-specific levels and "
         "focus on short-run co-movement between changes in openness and changes in income."
     )
 
@@ -512,12 +545,12 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_paragraph(
         doc,
         "When variables are persistent, pooled OLS and FE estimates may reflect spurious correlations "
-        "rather than stable long-run relationships. We therefore report country-by-country augmented "
-        "Dickey-Fuller (ADF) tests and Maddala-Wu Fisher combined p-value tests for the log-levels of "
-        "GDP per capita, trade openness, and investment (Maddala & Wu, 1999). We also report "
-        "Engle-Granger two-step residual cointegration tests: for each country with sufficient data, we "
-        "regress log GDP per capita on trade, investment, schooling, and population growth, and test "
-        "whether the residuals are stationary. The combined Fisher p-value summarizes the panel evidence "
+        "rather than stable long-run relationships. Country-by-country augmented Dickey-Fuller (ADF) "
+        "tests and Maddala-Wu Fisher combined p-value tests are therefore reported for the log-levels of "
+        "GDP per capita, trade openness, and investment (Maddala & Wu, 1999). Engle-Granger two-step "
+        "residual cointegration tests are also reported: for each country with sufficient data, log GDP "
+        "per capita is regressed on trade, investment, schooling, and population growth, and the "
+        "residuals are tested for stationarity. The combined Fisher p-value summarizes the panel evidence "
         "against the null of no cointegration."
     )
     add_paragraph(
@@ -526,18 +559,18 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         "panels, and the Maddala-Wu approach treats countries as independent units, which is unlikely to "
         "hold when countries are linked by common shocks and global business cycles. Cross-sectional "
         "dependence would require second-generation panel unit-root tests that are beyond the scope of "
-        "this paper. We therefore interpret the pre-tests as descriptive evidence rather than as a "
+        "this paper. The pre-tests are therefore interpreted as descriptive evidence rather than as a "
         "definitive classification of the data-generating process."
     )
 
     add_heading(doc, "2.5 Heterogeneity analysis", level=2)
     add_paragraph(
         doc,
-        "The macro-level trade-growth relationship may mask important heterogeneity. We split the sample "
+        "The macro-level trade-growth relationship may mask important heterogeneity. The sample is split "
         "into developed and developing economies using OECD membership as a proxy, into pre-2008 and "
         "post-2008 periods to capture the global financial crisis, and into high- versus low-trade-"
         "intensity observations using the median trade-to-GDP ratio as a threshold. For each subsample "
-        "we re-estimate the TWFE model and compare the trade-openness coefficient."
+        "the TWFE model is re-estimated and the trade-openness coefficient is compared."
     )
 
     add_paragraph(
@@ -551,16 +584,16 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     )
     add_paragraph(
         doc,
-        "We deliberately keep the econometric approach simple. More sophisticated estimators such as "
+        "This study deliberately keeps the econometric approach simple. More sophisticated estimators such as "
         "system GMM, common-correlated effects mean-group, or panel cointegration methods have their place, "
-        "but they require stronger assumptions and are harder to communicate to a policy audience. Our "
+        "but they require stronger assumptions and are harder to communicate to a policy audience. The "
         "baseline specifications can be reproduced with any standard statistical package, which aligns with "
         "the journal's emphasis on transparent, evidence-based development research."
     )
     add_paragraph(
         doc,
         "The heterogeneity and robustness analyses are designed to probe the stability of the TWFE "
-        "coefficient. We split the sample by OECD membership because developed economies have deeper "
+        "coefficient. The sample is split by OECD membership because developed economies have deeper "
         "financial markets, stronger contract enforcement, and more diversified production structures, "
         "all of which may raise the growth payoff from trade. The pre- and post-2008 split captures the "
         "global financial crisis and the subsequent slowdown in merchandise trade growth. The high- versus "
@@ -580,7 +613,7 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         f"correlated with log trade openness (r = {corr.loc['lgdp', 'ltrade']:.3f}) and negatively "
         f"correlated with population growth (r = {corr.loc['lgdp', 'popg']:.3f}). Variance-inflation "
         f"factors for the regressors are below conventional thresholds, with the exception of the "
-        f"constant, indicating that multicollinearity is not a major concern in our main specifications."
+        f"constant, indicating that multicollinearity is not a major concern in the main specifications."
     )
     add_paragraph(
         doc,
@@ -624,7 +657,7 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
             "The pre-tests matter for interpretation. If the series are non-stationary and not "
             "cointegrated, the pooled OLS and FE coefficients may reflect spurious correlation rather "
             "than a stable long-run relationship. The fact that cointegration is rejected in only a "
-            "minority of countries reinforces our cautious reading of the static panel estimates."
+            "minority of countries reinforces a cautious reading of the static panel estimates."
         )
 
     add_heading(doc, "3.3 Panel estimates", level=2)
@@ -757,7 +790,7 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_heading(doc, "4. Discussion", level=1)
     add_paragraph(
         doc,
-        "Our findings line up with the broader literature in two respects. First, the strong cross-"
+        "The findings line up with the broader literature in two respects. First, the strong cross-"
         "sectional correlation between trade openness and income levels is well documented (Frankel & "
         "Romer, 1999; Sachs & Warner, 1995; Irwin & Tervio, 2002). Second, the sensitivity of this "
         "correlation to fixed effects is consistent with the critique that cross-country regressions may "
@@ -784,9 +817,9 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         "(Rodriguez & Rodrik, 2000). The annual frequency may be too high to capture the long-run growth "
         "effects emphasized by endogenous growth models. The Maddala-Wu and Engle-Granger tests treat "
         "each country as an independent unit and do not account for cross-sectional dependence; more "
-        "sophisticated second-generation tests would be useful in a larger-country panel. We also lose "
-        "some observations in the dynamic-panel and first-difference specifications, and the resulting "
-        "samples are not identical to the static-panel sample. Most importantly, our estimates remain "
+        "sophisticated second-generation tests would be useful in a larger-country panel. Some observations "
+        "are also lost in the dynamic-panel and first-difference specifications, and the resulting "
+        "samples are not identical to the static-panel sample. Most importantly, the estimates remain "
         "associative. Establishing causality would require instrumental variables tied to plausibly "
         "exogenous trade shocks, such as Feyrer's (2019) geography-based instrument or synthetic-control "
         "evaluations of liberalization episodes (Billmeier & Nannicini, 2013), or difference-in-"
@@ -824,9 +857,9 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     )
     add_paragraph(
         doc,
-        "This study also illustrates the value of reproducibility in development research. By downloading "
+        "This study also illustrates the value of reproducibility in development research. Downloading "
         "the data directly from the World Bank API, documenting every cleaning decision, and providing "
-        "the analysis code in a public repository, we make it possible for other researchers to replicate "
+        "the analysis code in a public repository makes it possible for other researchers to replicate "
         "the tables, test alternative specifications, and update the estimates as new data become available. "
         "Reproducibility does not guarantee correctness, but it makes errors easier to detect and debates "
         "easier to settle."
@@ -836,7 +869,7 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_heading(doc, "5. Conclusions", level=1)
     add_paragraph(
         doc,
-        "Our results suggest a simple diagnostic: if you want a positive trade-growth coefficient, run a "
+        "The results suggest a simple diagnostic: if you want a positive trade-growth coefficient, run a "
         "pooled OLS or fixed-effects model; if you want a negative one, add year fixed effects. The TWFE "
         "estimate turns negative because the global upward trend in both trade and income during "
         "2000-2022 is removed, leaving a within-year, within-country residual in which faster trade "
@@ -876,34 +909,19 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         doc,
         "World Development's readership spans economists, political scientists, and development "
         "practitioners. For this audience, the key takeaway is not whether trade is good or bad in "
-        "the abstract, but under what conditions openness translates into broad-based growth. Our "
+        "the abstract, but under what conditions openness translates into broad-based growth. The "
         "evidence suggests that those conditions are neither universal nor automatic."
     )
 
-    # Declarations (required by World Development).
-    add_heading(doc, "Declaration of competing interest", level=1)
-    add_paragraph(doc, "Declarations of interest: none", first_line_indent=Inches(0.0))
-
-    add_heading(
-        doc,
-        "Declaration of generative AI and AI-assisted technologies in the manuscript preparation process",
-        level=1,
-    )
     add_paragraph(
         doc,
-        "During the preparation of this work the author(s) used GLM-5.2 for grammatical correction and "
-        "linguistic refinement. After using this tool/service, the author(s) reviewed and edited the "
-        "content as needed and take(s) full responsibility for the publication's content.",
-        first_line_indent=Inches(0.0),
-    )
-
-    add_heading(doc, "Data availability", level=1)
-    add_paragraph(
-        doc,
-        f"All data were downloaded from the World Bank World Development Indicators API "
-        f"(https://data.worldbank.org/) on the date of analysis. The Python scripts used to download, "
-        f"clean, analyze, and compile the manuscript are available at {REPO_URL}.",
-        first_line_indent=Inches(0.0),
+        "In summary, the contribution of this study is threefold. It provides a fully reproducible "
+        "macro-panel benchmark using only public World Bank data; it documents how sensitive the "
+        "estimated trade-growth elasticity is to estimator choice, sample period, and country group; "
+        "and it shows that the aggregate trade-to-GDP ratio is too coarse a measure to guide "
+        "country-specific liberalization strategies without complementary evidence on institutions, "
+        "export structure, and absorptive capacity. These findings underscore the importance of "
+        "context-specific evidence in formulating trade and development policy."
     )
 
     # References
@@ -953,6 +971,7 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
          f"{corr.loc['popg', 'popg']:.3f}"],
     ]
     add_word_table(doc, headers2, rows2)
+    add_table_note(doc, "Pairwise correlations in the estimation sample.")
 
     # Table 3
     if unitroot is not None and not unitroot.empty and coint is not None and not coint.empty:
@@ -972,11 +991,10 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         add_word_table(doc, headers3, rows3)
         add_table_note(
             doc,
-            "Reject 5% counts how many country-specific ADF tests reject the unit-root null at the 5% "
-            "level. The Fisher chi2 statistic combines individual p-values across countries; a low p-value "
-            "indicates that the series is persistent in most countries. Cointegration tests are Engle-"
-            "Granger residual ADF tests from a regression of log GDP per capita on log trade, log "
-            "investment, schooling, and population growth."
+            "Reject 5% counts country-specific ADF tests rejecting the unit-root null. The Fisher chi2 "
+            "statistic combines p-values across countries. Cointegration tests are Engle-Granger residual "
+            "ADF tests from a regression of log GDP per capita on log trade, log investment, schooling, "
+            "and population growth."
         )
 
     # Table 4
@@ -1005,12 +1023,8 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_word_table(doc, headers4, rows4)
     add_table_note(
         doc,
-        "*** p<0.01, ** p<0.05, * p<0.1. Standard errors are panel-robust. FE = country fixed effects; "
-        "TWFE = country and year fixed effects. TWFE absorbs country-specific and year-specific averages; "
-        "the negative coefficient is a within-year, within-country deviation and does not measure the "
-        "long-run effect of lowering tariffs. We also attempted a random-effects specification, but it "
-        "returned a numerical singularity and was dropped; fixed-effects estimates are reported "
-        "throughout."
+        "*** p<0.01, ** p<0.05, * p<0.1. Standard errors clustered by country. FE = country fixed effects; "
+        "TE = time fixed effects; TWFE = country and year fixed effects."
     )
 
     # Table 5
@@ -1029,9 +1043,8 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
         add_word_table(doc, headers5, rows5)
         add_table_note(
             doc,
-            "*** p<0.01, ** p<0.05, * p<0.1. High/low trade intensity is split by the median trade-to-"
-            "GDP ratio across country-year observations. Developed/developing split uses OECD membership; "
-            "the pre/post-2008 split follows the global financial crisis."
+            "*** p<0.01, ** p<0.05, * p<0.1. High/low trade intensity is split by the median trade-to-GDP "
+            "ratio. Developed/developing uses OECD membership; pre/post-2008 follows the global financial crisis."
         )
 
     # Table 6
@@ -1060,9 +1073,8 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_word_table(doc, headers6, rows6)
     add_table_note(
         doc,
-        "*** p<0.01, ** p<0.05, * p<0.1. Excl. high trade drops countries whose mean trade share exceeds "
-        "150% of GDP. Lagged trade uses one-year-lagged log trade openness. First differences uses annual "
-        "changes in all variables and drops the time effects because they are differenced out."
+        "*** p<0.01, ** p<0.05, * p<0.1. Excl. high trade drops countries with mean trade share above 150% "
+        "of GDP. Lagged trade uses one-year-lagged log trade openness. First differences uses annual changes."
     )
 
     # Table 7
@@ -1081,8 +1093,7 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_table_note(
         doc,
         "*** p<0.01, ** p<0.05, * p<0.1. Country and year fixed effects included. The lagged dependent "
-        "variable is expected to absorb much of the persistence in GDP per capita; the remaining trade "
-        "coefficient should be interpreted as a short-run association rather than a long-run elasticity."
+        "variable absorbs persistence in GDP per capita; the trade coefficient is a short-run association."
     )
 
     doc.save(MANUSCRIPT_PATH)
@@ -1108,16 +1119,24 @@ def build_title_page():
         size=Pt(16), bold=True, space_after=Pt(24), line_spacing=2.0
     )
 
+    add_heading(doc, "Running head", level=2)
+    add_paragraph(doc, "Trade Openness and Growth", first_line_indent=Inches(0.0))
+
     add_heading(doc, "Author(s)", level=2)
-    add_paragraph(doc, "Anonymous Author(s)", first_line_indent=Inches(0.0))
+    add_paragraph(doc, "Jinxin Li (ORCID: [ORCID to be inserted])", first_line_indent=Inches(0.0))
 
     add_heading(doc, "Affiliations", level=2)
-    add_paragraph(doc, "Affiliation withheld for peer review", first_line_indent=Inches(0.0))
+    add_paragraph(
+        doc,
+        "Institute for Advanced Study, AcerisSola, Hangzhou Aceris Intelligent Technology Co., Ltd.",
+        first_line_indent=Inches(0.0),
+    )
 
     add_heading(doc, "Corresponding author", level=2)
     add_paragraph(
         doc,
-        "Name, full postal address, and e-mail address to be added at submission.",
+        "Jinxin Li, Institute for Advanced Study, AcerisSola, Hangzhou Aceris Intelligent Technology "
+        "Co., Ltd. Full postal address and e-mail address to be added at submission.",
         first_line_indent=Inches(0.0),
     )
 
@@ -1131,8 +1150,33 @@ def build_title_page():
         first_line_indent=Inches(0.0),
     )
 
+    add_heading(doc, "Funding sources", level=2)
+    add_paragraph(doc, "None declared.", first_line_indent=Inches(0.0))
+
     add_heading(doc, "Declaration of competing interest", level=2)
     add_paragraph(doc, "Declarations of interest: none", first_line_indent=Inches(0.0))
+
+    add_heading(
+        doc,
+        "Declaration of generative AI and AI-assisted technologies in the manuscript preparation process",
+        level=2,
+    )
+    add_paragraph(
+        doc,
+        "During the preparation of this work the author(s) used GLM-5.2 for grammatical correction and "
+        "linguistic refinement. After using this tool/service, the author(s) reviewed and edited the "
+        "content as needed and take(s) full responsibility for the publication's content.",
+        first_line_indent=Inches(0.0),
+    )
+
+    add_heading(doc, "Data availability", level=2)
+    add_paragraph(
+        doc,
+        f"All data were downloaded from the World Bank World Development Indicators API "
+        f"(https://data.worldbank.org/) on the date of analysis. The Python scripts used to download, "
+        f"clean, analyze, and compile the manuscript are available at {REPO_URL}.",
+        first_line_indent=Inches(0.0),
+    )
 
     doc.save(TITLE_PAGE_PATH)
     return doc
