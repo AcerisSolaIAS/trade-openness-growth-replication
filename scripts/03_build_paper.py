@@ -39,6 +39,9 @@ def set_default_font(doc, font_name="Times New Roman", font_size=Pt(12)):
     font.name = font_name
     font.size = font_size
     style.element.rPr.rFonts.set(qn("w:eastAsia"), font_name)
+    # Default the Normal style to double line spacing so every paragraph inherits it.
+    style.paragraph_format.line_spacing = 2.0
+    style.paragraph_format.space_after = Pt(0)
 
 
 def set_run_font(run, font_name="Times New Roman", size=Pt(12), bold=False,
@@ -103,32 +106,62 @@ def add_centered_paragraph(doc, text, size=Pt(12), bold=False, italic=False,
     return p
 
 
+def _add_field_run(paragraph, instr_text, default_value=""):
+    """Append a Word field (e.g. PAGE) with begin/separate/result/end."""
+    # begin
+    run1 = paragraph.add_run()
+    fld_begin = OxmlElement("w:fldChar")
+    fld_begin.set(qn("w:fldCharType"), "begin")
+    run1._r.append(fld_begin)
+    # instruction
+    run2 = paragraph.add_run()
+    instr = OxmlElement("w:instrText")
+    instr.set(qn("xml:space"), "preserve")
+    instr.text = f" {instr_text} "
+    run2._r.append(instr)
+    # separate
+    run3 = paragraph.add_run()
+    fld_sep = OxmlElement("w:fldChar")
+    fld_sep.set(qn("w:fldCharType"), "separate")
+    run3._r.append(fld_sep)
+    # default displayed result
+    run4 = paragraph.add_run()
+    run4.text = default_value
+    # end
+    run5 = paragraph.add_run()
+    fld_end = OxmlElement("w:fldChar")
+    fld_end.set(qn("w:fldCharType"), "end")
+    run5._r.append(fld_end)
+
+
 def add_page_number(section):
     """Insert a centered page number in the footer of the section."""
     footer = section.footer
     p = footer.paragraphs[0] if footer.paragraphs else footer.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     set_paragraph_spacing(p, line_spacing=2.0, first_line_indent=Inches(0.0))
-    run = p.add_run()
-    fld_begin = OxmlElement("w:fldChar")
-    fld_begin.set(qn("w:fldCharType"), "begin")
-    instr = OxmlElement("w:instrText")
-    instr.set(qn("xml:space"), "preserve")
-    instr.text = "PAGE"
-    fld_end = OxmlElement("w:fldChar")
-    fld_end.set(qn("w:fldCharType"), "end")
-    run._r.append(fld_begin)
-    run._r.append(instr)
-    run._r.append(fld_end)
+    _add_field_run(p, "PAGE", default_value="1")
 
 
 def add_line_numbers(section):
-    """Enable continuous line numbering for the section."""
+    """Enable continuous line numbering for the section.
+
+    Inserts <w:lnNumType> immediately after <w:pgMar> so that the element
+    order conforms to the OOXML sectPr schema (pgMar -> lnNumType -> cols -> docGrid).
+    """
     lnNumType = OxmlElement("w:lnNumType")
     lnNumType.set(qn("w:start"), "1")
     lnNumType.set(qn("w:countBy"), "1")
     lnNumType.set(qn("w:restart"), "continuous")
-    section._sectPr.append(lnNumType)
+
+    sectPr = section._sectPr
+    pgMar = sectPr.find(qn("w:pgMar"))
+    if pgMar is not None:
+        # insert right after pgMar
+        pgMar_index = list(sectPr).index(pgMar)
+        sectPr.insert(pgMar_index + 1, lnNumType)
+    else:
+        sectPr.append(lnNumType)
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +285,38 @@ def add_reference_list(doc):
         p.paragraph_format.space_after = Pt(0)
         run = p.add_run(ref_text)
         set_run_font(run, size=Pt(12))
+
+
+def add_declarations(doc):
+    """Add Data Availability, AI, Competing Interest and Funding statements
+    after References and before Tables, so the main manuscript is complete."""
+    add_heading(doc, "Data Availability Statement", level=1)
+    add_paragraph(
+        doc,
+        f"All data were downloaded from the World Bank World Development Indicators API "
+        f"(https://data.worldbank.org/) on the date of analysis. The Python scripts used to download, "
+        f"clean, analyze, and compile the manuscript are available at {REPO_URL}.",
+        first_line_indent=Inches(0.0),
+    )
+
+    add_heading(
+        doc,
+        "Declaration of Generative AI and AI-assisted Technologies in the Manuscript Preparation Process",
+        level=1,
+    )
+    add_paragraph(
+        doc,
+        "During the preparation of this work the author(s) used GLM-5.2 for grammatical correction and "
+        "linguistic refinement. After using this tool/service, the author(s) reviewed and edited the "
+        "content as needed and take(s) full responsibility for the publication's content.",
+        first_line_indent=Inches(0.0),
+    )
+
+    add_heading(doc, "Declaration of Conflicting Interests", level=1)
+    add_paragraph(doc, "Declarations of interest: none.", first_line_indent=Inches(0.0))
+
+    add_heading(doc, "Funding", level=1)
+    add_paragraph(doc, "None declared.", first_line_indent=Inches(0.0))
 
 
 # ---------------------------------------------------------------------------
@@ -928,6 +993,11 @@ def build_manuscript(panel, dyn, robust, desc, corr, vif, unitroot, coint, het):
     add_heading(doc, "References", level=1)
     add_reference_list(doc)
 
+    # Declarations (also reproduced in the title page; included here so the
+    # anonymized manuscript remains complete regardless of how the submission
+    # system handles the title page).
+    add_declarations(doc)
+
     # Tables (placed at the end, per journal guidelines).
     doc.add_page_break()
     add_heading(doc, "Tables", level=1)
@@ -1123,20 +1193,20 @@ def build_title_page():
     add_paragraph(doc, "Trade Openness and Growth", first_line_indent=Inches(0.0))
 
     add_heading(doc, "Author(s)", level=2)
-    add_paragraph(doc, "Jinxin Li (ORCID: [ORCID to be inserted])", first_line_indent=Inches(0.0))
+    add_paragraph(doc, "Jinxin Li (ORCID: 0009-0002-2076-5847)", first_line_indent=Inches(0.0))
 
     add_heading(doc, "Affiliations", level=2)
     add_paragraph(
         doc,
-        "Institute for Advanced Study, AcerisSola, Hangzhou Aceris Intelligent Technology Co., Ltd.",
+        "Institute for Advanced Study, AcerisSola, Hangzhou Aceris Intelligent Technology Co., Ltd., "
+        "No. 301 Zixuan Road, Sandun Town, Xihu District, Hangzhou, China",
         first_line_indent=Inches(0.0),
     )
 
-    add_heading(doc, "Corresponding author", level=2)
+    add_heading(doc, "Author contact", level=2)
     add_paragraph(
         doc,
-        "Jinxin Li, Institute for Advanced Study, AcerisSola, Hangzhou Aceris Intelligent Technology "
-        "Co., Ltd. Full postal address and e-mail address to be added at submission.",
+        "Jinxin Li. E-mail: jinxin.li@solaai.net",
         first_line_indent=Inches(0.0),
     )
 
