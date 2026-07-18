@@ -20,6 +20,7 @@ from docx.oxml import OxmlElement
 import pandas as pd
 import numpy as np
 import os
+import re
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = REPO_ROOT / "output"
@@ -197,8 +198,9 @@ REFERENCES = [
     ("worldbank2024", "World Bank. (2024). World Development Indicators. World Bank. https://data.worldbank.org/"),
 ]
 
-# Sort alphabetically by first author surname and replace hyphens in page ranges with en dashes.
-REFERENCES.sort(key=lambda kv: kv[1].split(",")[0].split()[-1].lower())
+# Sort alphabetically by first author surname or institutional author name, and replace
+# hyphens in page ranges with en dashes.
+REFERENCES.sort(key=lambda kv: re.split(r"[,.]", kv[1])[0].split()[0].lower())
 
 
 def _en_dash_page_range(ref):
