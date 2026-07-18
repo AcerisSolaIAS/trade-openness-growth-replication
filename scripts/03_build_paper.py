@@ -431,7 +431,7 @@ def build_document():
     add_heading_custom(doc, "Data availability", level=1)
     add_paragraph_custom(
         doc,
-        "All data were downloaded from the World Bank World Development Indicators API (https://data.worldbank.org/) on the date of analysis. The Python scripts used to download, clean, analyze, and compile the manuscript are available at https://github.com/YOUR_USERNAME/trade-openness-growth-replication.",
+        "All data were downloaded from the World Bank World Development Indicators API (https://data.worldbank.org/) on the date of analysis. The Python scripts used to download, clean, analyze, and compile the manuscript are available at https://github.com/AcerisSolaIAS/trade-openness-growth-replication.",
         first_line_indent=Inches(0.5),
     )
 
@@ -555,4 +555,4 @@ def build_document():
 
 
 if __name__ == "__main__":
-    build
+    build_document()

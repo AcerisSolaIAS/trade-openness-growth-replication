@@ -6,6 +6,8 @@ This repository contains the fully reproducible Python code for the paper *Trade
 
 All data are downloaded from the public [World Bank World Development Indicators (WDI) API](https://data.worldbank.org/), cleaned, analyzed, and compiled into the manuscript using the scripts in this repository. No results are hard-coded or fabricated.
 
+The repository is hosted at https://github.com/AcerisSolaIAS/trade-openness-growth-replication.
+
 ## Repository structure
 
 ```

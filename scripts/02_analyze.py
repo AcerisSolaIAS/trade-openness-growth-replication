@@ -410,4 +410,5 @@ def main():
     print("\nAnalysis complete. Outputs saved to", OUT_DIR)
 
 
-if __name__ == "__
+if __name__ == "__main__":
+    main()

@@ -100,3 +100,7 @@ def main():
     print(df_wide.isna().sum())
 
 
+if __name__ == "__main__":
+    main()
+
+
