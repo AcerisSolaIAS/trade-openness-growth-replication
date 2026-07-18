@@ -1,0 +1,2 @@
+variable,n_countries,n_reject_5pct,mean_pvalue,fisher_chi2,fisher_pvalue,fisher_k
+lgdp_on_ltrade_linv_school_popg,154,136,0.027514567257921195,1943.7079724175703,0.0,154
