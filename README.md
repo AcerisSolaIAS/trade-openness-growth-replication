@@ -18,7 +18,8 @@ The repository is hosted at https://github.com/AcerisSolaIAS/trade-openness-grow
 │   ├── 01_download_wdi.py     # Download WDI data via API
 │   ├── 02_analyze.py          # Econometric analysis and output tables
 │   └── 03_build_paper.py      # Generate a reproducible manuscript draft from results
-├── Trade_Openness_Growth_Real.docx  # Final manuscript
+├── Trade_Openness_Growth_Real.docx  # Anonymized manuscript (main text, tables, references)
+├── title_page.docx            # Title page with author info, acknowledgments, and competing-interest declaration
 ├── requirements.txt           # Python dependencies
 ├── LICENSE                    # MIT License
 └── README.md                  # This file
@@ -50,7 +51,7 @@ python scripts/02_analyze.py
 python scripts/03_build_paper.py
 ```
 
-This will generate `Trade_Openness_Growth_Real.docx` from the analysis outputs. The version of the manuscript included in this repository is the final edited version used for submission; the script reproduces the quantitative results and a draft of the document structure.
+This will generate `Trade_Openness_Growth_Real.docx` and `title_page.docx` from the analysis outputs. The version of the manuscript included in this repository is formatted for submission to *World Development* (Elsevier): 12-point Times New Roman, double-spaced text, unstructured abstract, Harvard/APA author-date citations, alphabetical reference list, declarations, data-availability statement, and tables placed at the end. The script reproduces the quantitative results and a draft of the document structure; the final wording was edited by the authors.
 
 ## Key econometric specifications
 
